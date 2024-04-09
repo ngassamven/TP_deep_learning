@@ -2002,19 +2002,48 @@ print(f'Best ARIMA{best_order_aic_cfg_1} AIC={best_order_aic_score_1:.3f}')
 
 """# SARIMA(p,d,q)(P,D,Q)s"""
 
-import statsmodels.api as sm
+!pip install pyodbc
 
+import pandas as pd
+import pyodbc
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 
+# Split data into train (80%) and test (20%) sets
+ind_split = int(len(transformed_hourly_dataframe) * 0.5)
 
-# Ajustement du modèle ARIMA sur les données d'entraînement
-model = sm.tsa.arima.ARIMA(ts_train, order=(6, 2, 4), seasonal_order=(1, 1, 1, 12), trend='n', method='css-mle')
-results = model.fit()
+ts_train = transformed_hourly_dataframe[:ind_split]
+ts_test = transformed_hourly_dataframe[ind_split:]
 
-# Résumé du modèle
-print(results.summary())
+transformed_hourly_dataframe.shape, ts_train.shape, ts_test.shape
 
-# Affichage des formes des ensembles de données
-print(transformed_hourly_dataframe.shape, ts_train.shape, ts_test.shape)
+# p,d,q
+#order=(6,1,10)
+#order=(6,2,4)
+#model = ARIMA(ts_train, order=order).fit()
+#print(model.summary())
+order = (6, 2, 4)
+seasonal_order = (1, 1, 1, 56)
+
+# Entraîner le modèle SARIMA
+model = SARIMAX(ts_train, order=order, seasonal_order=seasonal_order)
+model_fit = model.fit(disp=False)
+
+# Faire des prédictions
+predictions = model_fit.predict(start=len(ts_train), end=len(ts_train)+len(ts_test)-1)
+
+# Afficher les prédictions
+print(predictions)
+
+# Effectuer des prédictions
+predictions = model.predict(start=len(ts_train), end=len(ts_train) + len(ts_test) - 1, typ='levels')
+
+# Comparer les prédictions avec les valeurs réelles
+# Assurez-vous que ts_test a un index de date/heure pour que cela fonctionne correctement
+comparison_df = ts_test.copy()
+comparison_df['predictions'] = predictions
+
+# Afficher les prédictions et les valeurs réelles
+print(comparison_df)
 
 """# Regression"""
 
